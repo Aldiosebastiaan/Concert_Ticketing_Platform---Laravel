@@ -170,6 +170,26 @@
                             <div><div class="meta-label">Lokasi</div><div class="meta-value">{{ $event->lokasi }}</div></div>
                         </div>
                         <div class="meta-row">
+                            <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                            <div>
+                                <div class="meta-label">Masa Penjualan</div>
+                                <div class="meta-value">
+                                    @if($event->tanggal_mulai_penjualan && $event->tanggal_selesai_penjualan)
+                                        {{ $event->tanggal_mulai_penjualan->format('d M, H:i') }} - {{ $event->tanggal_selesai_penjualan->format('d M, H:i') }}
+                                        @if($event->isDalamRentangPenjualan())
+                                            <span style="color:#34c759; font-size:12px; margin-left:4px;">(Sedang Dijual)</span>
+                                        @elseif($event->isSebelumPenjualan())
+                                            <span style="color:#0071e3; font-size:12px; margin-left:4px;">(Segera)</span>
+                                        @else
+                                            <span style="color:#86868b; font-size:12px; margin-left:4px;">(Selesai)</span>
+                                        @endif
+                                    @else
+                                        -
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="meta-row">
                             <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
                             <div><div class="meta-label">Kategori</div><div class="meta-value">{{ $event->kategori->nama ?? '-' }}</div></div>
                         </div>
@@ -185,36 +205,66 @@
 
             {{-- Right: Ticket Widget --}}
             <div class="sticky-sidebar">
-                <div class="ticket-widget">
+                @if(session('success'))
+                    <div style="background:#f0faf3; border:1px solid #34c759; color:#1a7a3a; padding:12px; border-radius:12px; margin-bottom:16px; font-size:14px; font-weight:500;">
+                        {{ session('success') }}
+                    </div>
+                @endif
+                @if(session('error'))
+                    <div style="background:#fff0ef; border:1px solid #ff3b30; color:#d92a20; padding:12px; border-radius:12px; margin-bottom:16px; font-size:14px; font-weight:500;">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                <form action="{{ route('events.buy', $event) }}" method="POST" class="ticket-widget">
+                    @csrf
                     <div class="ticket-widget-header">
                         <div class="ticket-widget-title">Pilih Tiket</div>
                         <div class="ticket-widget-sub">{{ $event->tikets->count() }} tipe tiket tersedia</div>
                     </div>
 
                     @forelse($event->tikets as $tiket)
-                    <div class="ticket-option">
-                        <div>
-                            <div class="ticket-type">
-                                {{ $tiket->tipe === 'premium' ? '⭐ ' : '🎟 ' }}{{ ucfirst($tiket->tipe) }}
+                    @php $terjual = \App\Models\DetailOrder::where('tiket_id', $tiket->id)->sum('jumlah'); @endphp
+                    <label class="ticket-option" style="cursor:pointer;">
+                        <div style="display:flex; gap:12px; align-items:flex-start;">
+                            <input type="radio" name="tiket_id" value="{{ $tiket->id }}" style="margin-top:4px;" required {{ !$event->isDalamRentangPenjualan() || $tiket->stok <= 0 ? 'disabled' : '' }}>
+                            <div>
+                                <div class="ticket-type">
+                                    {{ $tiket->tipe === 'premium' ? '⭐ ' : '🎟 ' }}{{ ucfirst($tiket->tipe) }}
+                                </div>
+                                <div class="ticket-stock" style="margin-top:4px;">
+                                    <strong>Sisa: {{ number_format($tiket->stok) }}</strong> <span style="color:var(--border-strong);">|</span> Terjual: {{ number_format($terjual) }}
+                                </div>
                             </div>
-                            <div class="ticket-stock">{{ number_format($tiket->stok) }} tiket tersedia</div>
                         </div>
-                        <div class="ticket-price">Rp {{ number_format($tiket->harga, 0, ',', '.') }}</div>
-                    </div>
+                        <div class="ticket-price" style="margin-left:auto;">Rp {{ number_format($tiket->harga, 0, ',', '.') }}</div>
+                    </label>
                     @empty
                     <div style="padding:24px; text-align:center; color:var(--text-tertiary); font-size:14px;">Belum ada tiket tersedia</div>
                     @endforelse
 
                     <div style="padding:16px;">
-                        @if($event->status === 'Completed')
-                            <div style="text-align:center;font-size:14px;color:var(--text-tertiary);padding:8px 0;">Event telah selesai</div>
+                        @if(!$event->isDalamRentangPenjualan())
+                            <div style="text-align:center;font-size:14px;color:var(--text-tertiary);padding:8px 0; background:var(--bg); border-radius:10px;">
+                                @if($event->isSebelumPenjualan())
+                                    Penjualan belum dimulai
+                                @elseif($event->isSetelahPenjualan())
+                                    Penjualan telah ditutup
+                                @else
+                                    Tidak dalam masa penjualan
+                                @endif
+                            </div>
                         @else
-                            <button style="width:100%;padding:12px;background:#0071e3;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:inherit;" onmouseover="this.style.background='#0077ed'" onmouseout="this.style.background='#0071e3'">
+                            <div style="margin-bottom:12px;">
+                                <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block;">Jumlah Tiket</label>
+                                <input type="number" name="jumlah" value="1" min="1" max="10" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px;">
+                            </div>
+                            <button type="submit" style="width:100%;padding:12px;background:#0071e3;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:inherit;" onmouseover="this.style.background='#0077ed'" onmouseout="this.style.background='#0071e3'">
                                 Beli Tiket
                             </button>
                         @endif
                     </div>
-                </div>
+                </form>
 
                 {{-- Organizer --}}
                 <div style="margin-top:16px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px;">
