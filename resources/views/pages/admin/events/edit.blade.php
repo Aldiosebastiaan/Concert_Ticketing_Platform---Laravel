@@ -198,13 +198,10 @@ const hasSales = @json($hasSales);
 // Existing tickets passed from controller
 const existingTickets = @json($event->tikets);
 
-function addTicket(data = {}, isSold = false) {
+function addTicket(data = {}, sold = false) {
     const n = ++ticketCount;
     const container = document.getElementById('ticketContainer');
 
-    const canDelete = !isSold;
-    const deleteBtn = canDelete
-        ? `<button type="button" onclick="removeTicket(${n})" class="btn btn-danger btn-sm">
     const card = document.createElement('div');
     card.className = 'ticket-card';
     card.id = `ticket-${n}`;
@@ -299,6 +296,11 @@ btnCrop.addEventListener('click', function() {
 });
 
 // Load existing tickets
+existingTickets.forEach(t => {
+    // If hasSales, check if each ticket has any orders
+    const sold = hasSales;
+    addTicket(t, sold);
+});
 // If no tickets, add one
 if (existingTickets.length === 0) addTicket();
 </script>

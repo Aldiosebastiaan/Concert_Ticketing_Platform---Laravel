@@ -14,8 +14,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class EventController extends Controller
 {
-<<<<<<< Updated upstream
-=======
+
     /**
      * Public landing page — all events
      */
@@ -42,7 +41,7 @@ class EventController extends Controller
         return view('pages.public.events.index', compact('events', 'kategoris', 'featuredEvent'));
     }
 
->>>>>>> Stashed changes
+
     public function index(Request $request)
     {
         // 1. Load events dengan relationships: kategori dan tikets
