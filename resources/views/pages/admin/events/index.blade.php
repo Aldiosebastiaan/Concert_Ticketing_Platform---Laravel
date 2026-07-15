@@ -88,6 +88,7 @@
                     <th>Event</th>
                     <th>Kategori</th>
                     <th>Tanggal</th>
+                    <th>Masa Penjualan</th>
                     <th>Lokasi</th>
                     <th>Status</th>
                     <th style="width:120px">Aksi</th>
@@ -97,8 +98,19 @@
             @forelse($events as $event)
                 <tr>
                     {{-- Checkbox --}}
+                    @php
+                        $cannotDelete = false;
+                        $deleteReason = '';
+                        if ($event->hasSales()) {
+                            $cannotDelete = true;
+                            $deleteReason = 'Event ini tidak dapat dihapus karena sudah memiliki penjualan tiket. Menghapus event ini akan menghilangkan rekam jejak transaksi penjualan yang sudah terjadi.';
+                        } elseif ($event->isDalamRentangPenjualan()) {
+                            $cannotDelete = true;
+                            $deleteReason = 'Event ini tidak dapat dihapus karena sedang dalam masa aktif penjualan tiket. Silakan ubah rentang masa penjualan terlebih dahulu jika ingin menghapusnya.';
+                        }
+                    @endphp
                     <td>
-                        <input type="checkbox" name="ids[]" value="{{ $event->id }}" class="row-checkbox" {{ $event->hasSales() ? 'disabled title="Tidak_bisa_dihapus,_sudah_ada_penjualan"' : '' }}>
+                        <input type="checkbox" name="ids[]" value="{{ $event->id }}" class="row-checkbox" {{ $cannotDelete ? 'disabled title="'.$deleteReason.'"' : '' }}>
                     </td>
                     {{-- Thumbnail --}}
                     <td>
@@ -125,6 +137,15 @@
                     <td>
                         <span style="font-size:13px; font-weight:500;">{{ \Carbon\Carbon::parse($event->tanggal_waktu)->format('d M Y') }}</span>
                         <div class="event-meta">{{ \Carbon\Carbon::parse($event->tanggal_waktu)->format('H:i') }} WIB</div>
+                    </td>
+
+                    <td>
+                        @if($event->tanggal_mulai_penjualan && $event->tanggal_selesai_penjualan)
+                            <div style="font-size:12px;">{{ $event->tanggal_mulai_penjualan->format('d M, H:i') }}</div>
+                            <div style="font-size:12px; color:var(--text-secondary);">s/d {{ $event->tanggal_selesai_penjualan->format('d M, H:i') }}</div>
+                        @else
+                            -
+                        @endif
                     </td>
 
                     {{-- Lokasi --}}
@@ -156,9 +177,9 @@
                             <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-ghost btn-sm" title="Edit">
                                 <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </a>
-                            <form action="{{ route('admin.events.destroy', $event) }}" method="POST" style="display:inline;" onsubmit="return confirm('Hapus event ini? Tindakan ini tidak dapat dibatalkan.')">
+                            <form action="{{ route('admin.events.destroy', $event) }}" method="POST" style="display:inline;" class="form-delete">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm" title="Hapus">
+                                <button type="button" class="btn btn-danger btn-sm btn-delete-action" title="Hapus" data-cannot-delete="{{ $cannotDelete ? 'true' : 'false' }}" data-reason="{{ $deleteReason }}" style="{{ $cannotDelete ? 'opacity: 0.5; cursor: not-allowed;' : '' }}">
                                     <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </button>
                             </form>
@@ -167,7 +188,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8">
+                    <td colspan="9">
                         <div class="empty-state">
                             <div class="empty-state-icon">
                                 <svg fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -192,12 +213,14 @@
 </div>
 </form>
 
+@section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('selectAll');
     const rowCheckboxes = document.querySelectorAll('.row-checkbox:not([disabled])');
     const bulkContainer = document.getElementById('bulkDeleteContainer');
     const selectedCount = document.getElementById('selectedCount');
+    const bulkDeleteForm = document.getElementById('bulkDeleteForm');
 
     function updateBulkUI() {
         const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
@@ -226,7 +249,64 @@ document.addEventListener('DOMContentLoaded', function() {
             updateBulkUI();
         });
     });
+
+    // SweetAlert untuk single delete
+    const deleteButtons = document.querySelectorAll('.btn-delete-action');
+    deleteButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (this.dataset.cannotDelete === 'true') {
+                Swal.fire({
+                    title: 'Tidak Dapat Dihapus',
+                    text: this.dataset.reason,
+                    icon: 'error',
+                    confirmButtonColor: '#0071e3',
+                    confirmButtonText: 'Mengerti'
+                });
+                return;
+            }
+
+            const form = this.closest('form.form-delete');
+            Swal.fire({
+                title: 'Apakah Anda Yakin?',
+                text: "Event ini akan dihapus permanen dan tidak dapat dikembalikan!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff3b30',
+                cancelButtonColor: '#6e6e73',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+
+    // SweetAlert untuk bulk delete
+    if (bulkDeleteForm) {
+        bulkDeleteForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Hapus Massal',
+                text: `Apakah Anda yakin ingin menghapus ${selectedCount.textContent} event terpilih?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff3b30',
+                cancelButtonColor: '#6e6e73',
+                confirmButtonText: 'Ya, Hapus Semua!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
+    }
 });
 </script>
+@endsection
 
 @endsection

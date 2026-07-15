@@ -20,6 +20,8 @@ class Event extends Model
         'tanggal_waktu',
         'status',
         'status_publikasi',
+        'tanggal_mulai_penjualan',
+        'tanggal_selesai_penjualan',
     ];
 
     /**
@@ -32,6 +34,8 @@ class Event extends Model
 
     protected $casts = [
         'tanggal_waktu' => 'datetime',
+        'tanggal_mulai_penjualan' => 'datetime',
+        'tanggal_selesai_penjualan' => 'datetime',
     ];
 
     public function tikets()
@@ -73,6 +77,25 @@ class Event extends Model
     public function hasSales()
     {
         return $this->orders()->exists();
+    }
+
+    public function isDalamRentangPenjualan()
+    {
+        if (!$this->tanggal_mulai_penjualan || !$this->tanggal_selesai_penjualan) return false;
+        $now = now();
+        return $now >= $this->tanggal_mulai_penjualan && $now <= $this->tanggal_selesai_penjualan;
+    }
+
+    public function isSebelumPenjualan()
+    {
+        if (!$this->tanggal_mulai_penjualan) return false;
+        return now() < $this->tanggal_mulai_penjualan;
+    }
+
+    public function isSetelahPenjualan()
+    {
+        if (!$this->tanggal_selesai_penjualan) return false;
+        return now() > $this->tanggal_selesai_penjualan;
     }
 
     public function scopeUpcoming($query)

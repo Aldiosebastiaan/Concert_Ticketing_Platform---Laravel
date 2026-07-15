@@ -101,19 +101,21 @@ class EventController extends Controller
 
             // 3. Create event dengan data dari form
             $event = Event::create([
-                'user_id' => auth()->id(),
+                'user_id' => auth()->id() ?? 1,
                 'kategori_id' => $request->kategori_id,
                 'judul' => $request->judul,
                 'deskripsi' => $request->deskripsi,
                 'lokasi' => $request->lokasi,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
+                'tanggal_mulai_penjualan' => $request->tanggal_mulai_penjualan,
+                'tanggal_selesai_penjualan' => $request->tanggal_selesai_penjualan,
                 'status_publikasi' => $request->status_publikasi ?? 'published',
             ]);
 
             // Catat history
             $event->statusHistories()->create([
-                'user_id' => auth()->id(),
+                'user_id' => auth()->id() ?? 1,
                 'status_sebelumnya' => null,
                 'status_baru' => $event->status_publikasi,
                 'catatan' => 'Event dibuat',
@@ -197,12 +199,14 @@ class EventController extends Controller
                 'lokasi' => $request->lokasi,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
+                'tanggal_mulai_penjualan' => $request->tanggal_mulai_penjualan,
+                'tanggal_selesai_penjualan' => $request->tanggal_selesai_penjualan,
                 'status_publikasi' => $request->status_publikasi ?? $event->status_publikasi,
             ]);
 
             if ($oldStatus !== $event->status_publikasi) {
                 $event->statusHistories()->create([
-                    'user_id' => auth()->id(),
+                    'user_id' => auth()->id() ?? 1,
                     'status_sebelumnya' => $oldStatus,
                     'status_baru' => $event->status_publikasi,
                     'catatan' => 'Status diubah via edit event',
@@ -251,8 +255,11 @@ class EventController extends Controller
     public function destroy(Event $event)
     {
         // 1. Cek apakah event memiliki penjualan
+        if ($event->isDalamRentangPenjualan()) {
+            return back()->with('error', 'Event tidak dapat dihapus karena sedang dalam masa penjualan tiket.');
+        }
+
         if ($event->hasSales()) {
-            // 2. Jika ya, return dengan error message
             return back()->with('error', 'Event tidak dapat dihapus karena sudah memiliki penjualan tiket.');
         }
 
@@ -301,7 +308,7 @@ class EventController extends Controller
         $skipped = 0;
 
         foreach ($events as $event) {
-            if ($event->hasSales()) {
+            if ($event->hasSales() || $event->isDalamRentangPenjualan()) {
                 $skipped++;
             } else {
                 if ($event->gambar && $event->gambar !== 'konser.jpg' && !filter_var($event->gambar, FILTER_VALIDATE_URL)) {
