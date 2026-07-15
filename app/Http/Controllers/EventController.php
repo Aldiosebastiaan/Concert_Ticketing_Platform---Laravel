@@ -12,6 +12,32 @@ use Illuminate\Support\Facades\DB;
 
 class EventController extends Controller
 {
+    /**
+     * Public landing page — all events
+     */
+    public function publicIndex(Request $request)
+    {
+        $query = Event::with(['kategori', 'tikets']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('judul', 'like', "%{$search}%")
+                  ->orWhere('lokasi', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('kategori_id')) {
+            $query->where('kategori_id', $request->kategori_id);
+        }
+
+        $events    = $query->orderBy('tanggal_waktu', 'asc')->paginate(12);
+        $kategoris = Kategori::all();
+        $featuredEvent = Event::with(['kategori', 'tikets'])->orderBy('tanggal_waktu', 'desc')->first();
+
+        return view('pages.public.events.index', compact('events', 'kategoris', 'featuredEvent'));
+    }
+
     public function index(Request $request)
     {
         // 1. Load events dengan relationships: kategori dan tikets
