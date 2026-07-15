@@ -9,9 +9,40 @@ use App\Models\Tiket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use App\Exports\EventsExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EventController extends Controller
 {
+<<<<<<< Updated upstream
+=======
+    /**
+     * Public landing page — all events
+     */
+    public function publicIndex(Request $request)
+    {
+        $query = Event::with(['kategori', 'tikets'])->where('status_publikasi', 'published');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('judul', 'like', "%{$search}%")
+                  ->orWhere('lokasi', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('kategori_id')) {
+            $query->where('kategori_id', $request->kategori_id);
+        }
+
+        $events    = $query->orderBy('tanggal_waktu', 'asc')->paginate(12);
+        $kategoris = Kategori::all();
+        $featuredEvent = Event::with(['kategori', 'tikets'])->where('status_publikasi', 'published')->orderBy('tanggal_waktu', 'desc')->first();
+
+        return view('pages.public.events.index', compact('events', 'kategoris', 'featuredEvent'));
+    }
+
+>>>>>>> Stashed changes
     public function index(Request $request)
     {
         // 1. Load events dengan relationships: kategori dan tikets
@@ -53,9 +84,19 @@ class EventController extends Controller
     {
         DB::beginTransaction();
         try {
-            // 2. Handle image upload
+            // 2. Handle image upload (with cropper base64 support)
             $gambarPath = 'konser.jpg'; // fallback
-            if ($request->hasFile('gambar')) {
+            if ($request->has('gambar_base64') && !empty($request->gambar_base64)) {
+                $imageParts = explode(";base64,", $request->gambar_base64);
+                if (count($imageParts) == 2) {
+                    $imageTypeAux = explode("image/", $imageParts[0]);
+                    $imageType = $imageTypeAux[1];
+                    $imageBase64 = base64_decode($imageParts[1]);
+                    $fileName = 'events/' . uniqid() . '.' . $imageType;
+                    Storage::disk('public')->put($fileName, $imageBase64);
+                    $gambarPath = $fileName;
+                }
+            } elseif ($request->hasFile('gambar')) {
                 $gambarPath = $request->file('gambar')->store('events', 'public');
             }
 
@@ -68,6 +109,15 @@ class EventController extends Controller
                 'lokasi' => $request->lokasi,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
+                'status_publikasi' => $request->status_publikasi ?? 'published',
+            ]);
+
+            // Catat history
+            $event->statusHistories()->create([
+                'user_id' => auth()->id(),
+                'status_sebelumnya' => null,
+                'status_baru' => $event->status_publikasi,
+                'catatan' => 'Event dibuat',
             ]);
 
             // 4. Create tickets (loop through $request->tikets)
@@ -112,16 +162,35 @@ class EventController extends Controller
                 return back()->with('error', 'Tanggal dan waktu tidak dapat diubah karena event sudah memiliki penjualan tiket.')->withInput();
             }
 
-            // 3. Handle image update (hapus old image jika ada)
+            // 3. Handle image update (with cropper base64 support)
             $gambarPath = $event->gambar;
-            if ($request->hasFile('gambar')) {
-                if ($gambarPath && $gambarPath !== 'konser.jpg' && !filter_var($gambarPath, FILTER_VALIDATE_URL)) {
-                    Storage::disk('public')->delete($gambarPath);
+            $newImageUploaded = false;
+
+            if ($request->has('gambar_base64') && !empty($request->gambar_base64)) {
+                $imageParts = explode(";base64,", $request->gambar_base64);
+                if (count($imageParts) == 2) {
+                    $imageTypeAux = explode("image/", $imageParts[0]);
+                    $imageType = $imageTypeAux[1];
+                    $imageBase64 = base64_decode($imageParts[1]);
+                    $fileName = 'events/' . uniqid() . '.' . $imageType;
+                    Storage::disk('public')->put($fileName, $imageBase64);
+                    $gambarPath = $fileName;
+                    $newImageUploaded = true;
                 }
+            } elseif ($request->hasFile('gambar')) {
                 $gambarPath = $request->file('gambar')->store('events', 'public');
+                $newImageUploaded = true;
+            }
+
+            // Hapus old image jika ada gambar baru
+            if ($newImageUploaded) {
+                if ($event->gambar && $event->gambar !== 'konser.jpg' && !filter_var($event->gambar, FILTER_VALIDATE_URL)) {
+                    Storage::disk('public')->delete($event->gambar);
+                }
             }
 
             // 4. Update event data
+            $oldStatus = $event->status_publikasi;
             $event->update([
                 'kategori_id' => $request->kategori_id,
                 'judul' => $request->judul,
@@ -129,7 +198,17 @@ class EventController extends Controller
                 'lokasi' => $request->lokasi,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
+                'status_publikasi' => $request->status_publikasi ?? $event->status_publikasi,
             ]);
+
+            if ($oldStatus !== $event->status_publikasi) {
+                $event->statusHistories()->create([
+                    'user_id' => auth()->id(),
+                    'status_sebelumnya' => $oldStatus,
+                    'status_baru' => $event->status_publikasi,
+                    'catatan' => 'Status diubah via edit event',
+                ]);
+            }
 
             // 5. Handle tickets
             $requestedTicketIds = collect($request->tikets)->pluck('id')->filter()->toArray();
@@ -203,5 +282,63 @@ class EventController extends Controller
             ->get();
 
         return view('pages.public.events.show', compact('event', 'relatedEvents'));
+    }
+
+    public function export()
+    {
+        return Excel::download(new EventsExport, 'events.xlsx');
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada event yang dipilih.');
+        }
+
+        $events = Event::whereIn('id', $ids)->get();
+        $deleted = 0;
+        $skipped = 0;
+
+        foreach ($events as $event) {
+            if ($event->hasSales()) {
+                $skipped++;
+            } else {
+                if ($event->gambar && $event->gambar !== 'konser.jpg' && !filter_var($event->gambar, FILTER_VALIDATE_URL)) {
+                    Storage::disk('public')->delete($event->gambar);
+                }
+                $event->delete();
+                $deleted++;
+            }
+        }
+
+        if ($skipped > 0) {
+            return back()->with('warning', "$deleted event berhasil dihapus. $skipped event dilewati karena sudah memiliki penjualan tiket.");
+        }
+
+        return back()->with('success', "$deleted event berhasil dihapus.");
+    }
+
+    public function clone(Event $event)
+    {
+        DB::beginTransaction();
+        try {
+            $newEvent = $event->replicate();
+            $newEvent->judul = $event->judul . ' (Copy)';
+            $newEvent->save();
+
+            foreach ($event->tikets as $tiket) {
+                $newTiket = $tiket->replicate();
+                $newTiket->event_id = $newEvent->id;
+                $newTiket->save();
+            }
+
+            DB::commit();
+            return redirect()->route('admin.events.index')->with('success', 'Event berhasil diduplikasi.');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Gagal menduplikasi event: ' . $e->getMessage());
+        }
     }
 }
