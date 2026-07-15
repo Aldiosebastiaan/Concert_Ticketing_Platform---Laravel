@@ -81,18 +81,22 @@ class Event extends Model
         return $query->where('tanggal_waktu', '<=', now()->subHours(3));
     }
 
-    public function getImageUrlAttribute()
+    public function getImageUrlAttribute(): string
     {
         $url = $this->gambar;
 
-        if (filter_var($url, FILTER_VALIDATE_URL)) {
+        // Jika URL absolut (http/https) — Unsplash, external, dll
+        if ($url && (str_starts_with($url, 'http://') || str_starts_with($url, 'https://'))) {
             return $url;
         }
 
-        if ($url && Storage::exists($url)) {
+        // Jika path file lokal di storage
+        if ($url && $url !== 'konser.jpg') {
             return Storage::url($url);
         }
 
-        return 'konser.jpg';
+        // Fallback default
+        return asset('images/konser.jpg');
     }
+
 }
