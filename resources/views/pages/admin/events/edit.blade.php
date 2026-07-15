@@ -4,6 +4,7 @@
 @section('breadcrumb', 'Edit Event')
 
 @section('styles')
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
 <style>
     .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
     .form-card-header { padding: 20px 24px; border-bottom: 1px solid var(--border); }
@@ -105,6 +106,17 @@
                 @error('tanggal_waktu') <span class="form-error">{{ $message }}</span> @enderror
             </div>
 
+            {{-- Status Publikasi --}}
+            <div class="form-group">
+                <label class="form-label">Status Publikasi <span class="req">*</span></label>
+                <select name="status_publikasi" class="form-control" required>
+                    <option value="draft" {{ old('status_publikasi', $event->status_publikasi) == 'draft' ? 'selected' : '' }}>Draft</option>
+                    <option value="published" {{ old('status_publikasi', $event->status_publikasi) == 'published' ? 'selected' : '' }}>Published</option>
+                    <option value="cancelled" {{ old('status_publikasi', $event->status_publikasi) == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                </select>
+                @error('status_publikasi') <span class="form-error">{{ $message }}</span> @enderror
+            </div>
+
             {{-- Gambar --}}
             <div class="form-group" style="grid-column:1;">
                 <label class="form-label">Gambar Event</label>
@@ -120,12 +132,24 @@
                         <img src="{{ Storage::url($imgUrl) }}" alt="{{ $event->judul }}" class="current-image">
                     </div>
                 @endif
-                <input type="file" name="gambar" id="gambar" class="form-control {{ $errors->has('gambar') ? 'border-danger' : '' }}" accept="image/jpg,image/jpeg,image/png" onchange="previewImage(this)">
+                <input type="file" id="gambar_file" class="form-control" accept="image/jpg,image/jpeg,image/png">
+                <input type="hidden" name="gambar_base64" id="gambar_base64">
                 <span class="form-hint">Kosongkan jika tidak ingin mengubah gambar · Maksimal 2MB · JPG, JPEG, PNG</span>
                 @error('gambar') <span class="form-error">{{ $message }}</span> @enderror
+                
+                {{-- Cropper Container --}}
+                <div id="cropContainer" style="display:none; margin-top:16px;">
+                    <div style="max-width:100%; max-height:400px;">
+                        <img id="imageToCrop" src="" style="max-width: 100%; display:block;">
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnCrop" style="margin-top:8px;">
+                        Setuju Crop
+                    </button>
+                </div>
+
                 <div class="image-preview-container" id="imagePreview">
                     <div class="form-hint" style="margin-bottom:6px;">Preview gambar baru:</div>
-                    <img src="" alt="Preview Baru">
+                    <img src="" id="finalPreview" alt="Preview Baru">
                 </div>
             </div>
 
@@ -174,24 +198,28 @@ const hasSales = @json($hasSales);
 // Existing tickets passed from controller
 const existingTickets = @json($event->tikets);
 
-function addTicket(data = {}, isSold = false) {
+function addTicket(data = {}, sold = false) {
     const n = ++ticketCount;
     const container = document.getElementById('ticketContainer');
-
-    const canDelete = !isSold;
-    const deleteBtn = canDelete
-        ? `<button type="button" onclick="removeTicket(${n})" class="btn btn-danger btn-sm">
-               <svg fill="none" viewBox="0 0 24 24" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-               Hapus
-           </button>`
-        : `<span class="ticket-sold-badge">Sudah Terjual</span>`;
-
-    const hiddenId = data.id ? `<input type="hidden" name="tikets[${n}][id]" value="${data.id}">` : '';
 
     const card = document.createElement('div');
     card.className = 'ticket-card';
     card.id = `ticket-${n}`;
+    
+    let deleteBtn = '';
+    if (!sold) {
+        deleteBtn = `
+            <button type="button" onclick="removeTicket(${n})" class="btn btn-danger btn-sm">
+                <svg fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                Hapus
+            </button>
+        `;
+    } else {
+        deleteBtn = `<span class="ticket-sold-badge">Sudah Terjual</span>`;
+    }
+
     card.innerHTML = `
+        <input type="hidden" name="tikets[${n}][id]" value="${data.id || ''}">
         <div class="ticket-card-header">
             <span class="ticket-card-title">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="display:inline;margin-right:6px;vertical-align:middle;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -200,21 +228,20 @@ function addTicket(data = {}, isSold = false) {
             ${deleteBtn}
         </div>
         <div class="ticket-card-body">
-            ${hiddenId}
             <div class="form-group">
                 <label class="form-label">Tipe Tiket <span class="req">*</span></label>
-                <select name="tikets[${n}][tipe]" class="form-control" required>
-                    <option value="reguler" ${data.tipe === 'reguler' ? 'selected' : ''}>🎟 Reguler</option>
+                <select name="tikets[${n}][tipe]" class="form-control" required ${sold ? 'readonly style="pointer-events:none;"' : ''}>
+                    <option value="reguler" ${(data.tipe === 'reguler' || !data.tipe) ? 'selected' : ''}>🎟 Reguler</option>
                     <option value="premium" ${data.tipe === 'premium' ? 'selected' : ''}>⭐ Premium</option>
                 </select>
             </div>
             <div class="form-group">
                 <label class="form-label">Harga <span class="req">*</span></label>
-                <input type="number" name="tikets[${n}][harga]" class="form-control" min="0" value="${data.harga || ''}" required>
+                <input type="number" name="tikets[${n}][harga]" class="form-control" placeholder="0" min="0" value="${data.harga || ''}" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Stok <span class="req">*</span></label>
-                <input type="number" name="tikets[${n}][stok]" class="form-control" min="0" value="${data.stok || ''}" required>
+                <input type="number" name="tikets[${n}][stok]" class="form-control" placeholder="0" min="0" value="${data.stok || ''}" required>
             </div>
         </div>
     `;
@@ -226,17 +253,47 @@ function removeTicket(n) {
     if (el) el.remove();
 }
 
-function previewImage(input) {
-    const container = document.getElementById('imagePreview');
-    if (input.files && input.files[0]) {
+let cropper;
+const imageFile = document.getElementById('gambar_file');
+const imageToCrop = document.getElementById('imageToCrop');
+const cropContainer = document.getElementById('cropContainer');
+const btnCrop = document.getElementById('btnCrop');
+const imagePreview = document.getElementById('imagePreview');
+const finalPreview = document.getElementById('finalPreview');
+const gambarBase64 = document.getElementById('gambar_base64');
+
+imageFile.addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) {
         const reader = new FileReader();
-        reader.onload = e => {
-            container.querySelector('img').src = e.target.result;
-            container.style.display = 'block';
+        reader.onload = function(e) {
+            imageToCrop.src = e.target.result;
+            cropContainer.style.display = 'block';
+            imagePreview.style.display = 'none';
+            if (cropper) {
+                cropper.destroy();
+            }
+            cropper = new Cropper(imageToCrop, {
+                aspectRatio: 16 / 9,
+                viewMode: 1,
+            });
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(e.target.files[0]);
     }
-}
+});
+
+btnCrop.addEventListener('click', function() {
+    if (cropper) {
+        const canvas = cropper.getCroppedCanvas({
+            width: 800,
+            height: 450,
+        });
+        const base64 = canvas.toDataURL('image/jpeg');
+        gambarBase64.value = base64;
+        finalPreview.src = base64;
+        imagePreview.style.display = 'block';
+        cropContainer.style.display = 'none';
+    }
+});
 
 // Load existing tickets
 existingTickets.forEach(t => {
@@ -244,7 +301,6 @@ existingTickets.forEach(t => {
     const sold = hasSales;
     addTicket(t, sold);
 });
-
 // If no tickets, add one
 if (existingTickets.length === 0) addTicket();
 </script>

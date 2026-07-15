@@ -18,7 +18,17 @@ class Event extends Model
         'lokasi',
         'gambar',
         'tanggal_waktu',
+        'status',
+        'status_publikasi',
     ];
+
+    /**
+     * Get the status histories for the event.
+     */
+    public function statusHistories()
+    {
+        return $this->hasMany(EventStatusHistory::class);
+    }
 
     protected $casts = [
         'tanggal_waktu' => 'datetime',

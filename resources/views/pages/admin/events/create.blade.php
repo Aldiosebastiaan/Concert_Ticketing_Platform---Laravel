@@ -4,6 +4,7 @@
 @section('breadcrumb', 'Tambah Event')
 
 @section('styles')
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
 <style>
     .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
     .form-card-header { padding: 20px 24px; border-bottom: 1px solid var(--border); }
@@ -93,14 +94,38 @@
                 @error('tanggal_waktu') <span class="form-error">{{ $message }}</span> @enderror
             </div>
 
+            {{-- Status Publikasi --}}
+            <div class="form-group">
+                <label class="form-label">Status Publikasi <span class="req">*</span></label>
+                <select name="status_publikasi" class="form-control" required>
+                    <option value="draft" {{ old('status_publikasi') == 'draft' ? 'selected' : '' }}>Draft</option>
+                    <option value="published" {{ old('status_publikasi', 'published') == 'published' ? 'selected' : '' }}>Published</option>
+                    <option value="cancelled" {{ old('status_publikasi') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                </select>
+                @error('status_publikasi') <span class="form-error">{{ $message }}</span> @enderror
+            </div>
+
             {{-- Gambar --}}
             <div class="form-group col-span-2" style="grid-column: 1;">
                 <label class="form-label">Gambar Event</label>
-                <input type="file" name="gambar" id="gambar" class="form-control {{ $errors->has('gambar') ? 'border-danger' : '' }}" accept="image/jpg,image/jpeg,image/png" onchange="previewImage(this)">
+                <input type="file" id="gambar_file" class="form-control" accept="image/jpg,image/jpeg,image/png">
+                <input type="hidden" name="gambar_base64" id="gambar_base64">
                 <span class="form-hint">Maksimal 2MB · Format: JPG, JPEG, PNG · Biarkan kosong untuk gambar default</span>
                 @error('gambar') <span class="form-error">{{ $message }}</span> @enderror
-                <div class="image-preview-container" id="imagePreview">
-                    <img src="" alt="Preview">
+                
+                {{-- Cropper Container --}}
+                <div id="cropContainer" style="display:none; margin-top:16px;">
+                    <div style="max-width:100%; max-height:400px;">
+                        <img id="imageToCrop" src="" style="max-width: 100%; display:block;">
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnCrop" style="margin-top:8px;">
+                        Setuju Crop
+                    </button>
+                </div>
+
+                {{-- Final Preview --}}
+                <div class="image-preview-container" id="imagePreview" style="margin-top:16px;">
+                    <img src="" id="finalPreview" alt="Preview">
                 </div>
             </div>
 
@@ -143,6 +168,7 @@
 
 </form>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <script>
 let ticketCount = 0;
 
@@ -190,17 +216,47 @@ function removeTicket(n) {
     if (el) el.remove();
 }
 
-function previewImage(input) {
-    const container = document.getElementById('imagePreview');
-    if (input.files && input.files[0]) {
+let cropper;
+const imageFile = document.getElementById('gambar_file');
+const imageToCrop = document.getElementById('imageToCrop');
+const cropContainer = document.getElementById('cropContainer');
+const btnCrop = document.getElementById('btnCrop');
+const imagePreview = document.getElementById('imagePreview');
+const finalPreview = document.getElementById('finalPreview');
+const gambarBase64 = document.getElementById('gambar_base64');
+
+imageFile.addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) {
         const reader = new FileReader();
-        reader.onload = e => {
-            container.querySelector('img').src = e.target.result;
-            container.style.display = 'block';
+        reader.onload = function(e) {
+            imageToCrop.src = e.target.result;
+            cropContainer.style.display = 'block';
+            imagePreview.style.display = 'none';
+            if (cropper) {
+                cropper.destroy();
+            }
+            cropper = new Cropper(imageToCrop, {
+                aspectRatio: 16 / 9,
+                viewMode: 1,
+            });
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(e.target.files[0]);
     }
-}
+});
+
+btnCrop.addEventListener('click', function() {
+    if (cropper) {
+        const canvas = cropper.getCroppedCanvas({
+            width: 800,
+            height: 450,
+        });
+        const base64 = canvas.toDataURL('image/jpeg');
+        gambarBase64.value = base64;
+        finalPreview.src = base64;
+        imagePreview.style.display = 'block';
+        cropContainer.style.display = 'none';
+    }
+});
 
 // Add one default ticket on load
 addTicket();

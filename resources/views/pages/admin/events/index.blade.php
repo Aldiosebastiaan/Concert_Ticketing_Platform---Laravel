@@ -11,10 +11,16 @@
         <h1 class="page-title">Manajemen Event</h1>
         <p class="page-subtitle">Kelola semua event dan konser yang tersedia</p>
     </div>
-    <a href="{{ route('admin.events.create') }}" class="btn btn-primary">
-        <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Tambah Event
-    </a>
+    <div style="display: flex; gap: 8px;">
+        <a href="{{ route('admin.events.export') }}" class="btn btn-secondary">
+            <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Export Excel
+        </a>
+        <a href="{{ route('admin.events.create') }}" class="btn btn-primary">
+            <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Tambah Event
+        </a>
+    </div>
 </div>
 
 {{-- ─── Alerts ─── --}}
@@ -64,12 +70,20 @@
 </div>
 </form>
 
-{{-- ─── Table ─── --}}
+<form action="{{ route('admin.events.bulkDelete') }}" method="POST" id="bulkDeleteForm" onsubmit="return confirm('Hapus semua event yang dipilih?')">
+@csrf
 <div class="card">
+    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: none;" id="bulkDeleteContainer">
+        <button type="submit" class="btn btn-danger btn-sm">
+            <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Hapus Terpilih (<span id="selectedCount">0</span>)
+        </button>
+    </div>
     <div class="table-container">
         <table>
             <thead>
                 <tr>
+                    <th style="width:40px"><input type="checkbox" id="selectAll"></th>
                     <th style="width:72px">Gambar</th>
                     <th>Event</th>
                     <th>Kategori</th>
@@ -82,6 +96,10 @@
             <tbody>
             @forelse($events as $event)
                 <tr>
+                    {{-- Checkbox --}}
+                    <td>
+                        <input type="checkbox" name="ids[]" value="{{ $event->id }}" class="row-checkbox" {{ $event->hasSales() ? 'disabled title="Tidak_bisa_dihapus,_sudah_ada_penjualan"' : '' }}>
+                    </td>
                     {{-- Thumbnail --}}
                     <td>
                         @php $imgUrl = $event->image_url; @endphp
@@ -118,6 +136,9 @@
                     <td>
                         @php $status = $event->status; @endphp
                         <span class="badge badge-{{ strtolower($status) }}">{{ $status }}</span>
+                        <div style="margin-top: 4px; font-size: 11px; text-transform: uppercase; color: var(--text-secondary);">
+                            {{ $event->status_publikasi }}
+                        </div>
                     </td>
 
                     {{-- Actions --}}
@@ -126,6 +147,12 @@
                             <a href="{{ route('admin.events.show', $event) }}" class="btn btn-ghost btn-sm" title="Lihat">
                                 <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
                             </a>
+                            <form action="{{ route('admin.events.clone', $event) }}" method="POST" style="display:inline;" onsubmit="return confirm('Duplikasi event ini?')">
+                                @csrf
+                                <button type="submit" class="btn btn-ghost btn-sm" title="Clone">
+                                    <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.5"/></svg>
+                                </button>
+                            </form>
                             <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-ghost btn-sm" title="Edit">
                                 <svg fill="none" viewBox="0 0 24 24" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </a>
@@ -140,7 +167,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7">
+                    <td colspan="8">
                         <div class="empty-state">
                             <div class="empty-state-icon">
                                 <svg fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -163,5 +190,43 @@
     </div>
     @endif
 </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox:not([disabled])');
+    const bulkContainer = document.getElementById('bulkDeleteContainer');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateBulkUI() {
+        const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        selectedCount.textContent = checkedCount;
+        if (checkedCount > 0) {
+            bulkContainer.style.display = 'block';
+        } else {
+            bulkContainer.style.display = 'none';
+            selectAll.checked = false;
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            rowCheckboxes.forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+            updateBulkUI();
+        });
+    }
+
+    rowCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const allChecked = Array.from(rowCheckboxes).every(c => c.checked);
+            selectAll.checked = allChecked;
+            updateBulkUI();
+        });
+    });
+});
+</script>
 
 @endsection
