@@ -85,7 +85,7 @@
             <thead>
                 <tr>
                     <th style="width:40px"><input type="checkbox" id="selectAll"></th>
-                    <th>ID</th>
+                    <th>No</th>
                     <th>Nama Lokasi</th>
                     <th>Status</th>
                     <th>Jumlah Event</th>
@@ -103,7 +103,7 @@
                     <td>
                         <input type="checkbox" name="ids[]" value="{{ $lokasi->id }}" class="row-checkbox" {{ $cannotDelete ? 'disabled title="'.$deleteReason.'"' : '' }}>
                     </td>
-                    <td>{{ $lokasi->id }}</td>
+                    <td>{{ $lokasis->firstItem() + $loop->index }}</td>
                     <td>
                         <div class="event-title">{{ $lokasi->nama_lokasi }}</div>
                     </td>

@@ -13,11 +13,6 @@ class PublicOrderController extends Controller
 {
     public function store(Request $request, Event $event)
     {
-        // Pastikan event sedang dalam masa penjualan tiket
-        if (!$event->isDalamRentangPenjualan()) {
-            return back()->with('error', 'Pembelian tiket gagal karena saat ini bukan dalam masa penjualan.');
-        }
-
         $request->validate([
             'tiket_id' => 'required|exists:tikets,id',
             'jumlah' => 'required|integer|min:1'

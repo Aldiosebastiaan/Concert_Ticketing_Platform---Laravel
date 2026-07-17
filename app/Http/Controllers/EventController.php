@@ -115,8 +115,6 @@ class EventController extends Controller
                 'lokasi_id' => $request->lokasi_id,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
-                'tanggal_mulai_penjualan' => $request->tanggal_mulai_penjualan,
-                'tanggal_selesai_penjualan' => $request->tanggal_selesai_penjualan,
                 'status_publikasi' => $request->status_publikasi ?? 'published',
             ]);
 
@@ -209,8 +207,6 @@ class EventController extends Controller
                 'lokasi_id' => $request->lokasi_id,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
-                'tanggal_mulai_penjualan' => $request->tanggal_mulai_penjualan,
-                'tanggal_selesai_penjualan' => $request->tanggal_selesai_penjualan,
                 'status_publikasi' => $request->status_publikasi ?? $event->status_publikasi,
             ]);
 
@@ -266,10 +262,6 @@ class EventController extends Controller
     {
         // 1. Cek apakah event memiliki penjualan, kecuali jika event sudah 'Completed'
         if ($event->status !== 'Completed') {
-            if ($event->isDalamRentangPenjualan()) {
-                return back()->with('error', 'Event tidak dapat dihapus karena sedang dalam masa penjualan tiket.');
-            }
-
             if ($event->hasSales()) {
                 return back()->with('error', 'Event tidak dapat dihapus karena sudah memiliki penjualan tiket.');
             }
@@ -320,7 +312,7 @@ class EventController extends Controller
         $skipped = 0;
 
         foreach ($events as $event) {
-            if ($event->status !== 'Completed' && ($event->hasSales() || $event->isDalamRentangPenjualan())) {
+            if ($event->status !== 'Completed' && $event->hasSales()) {
                 $skipped++;
             } else {
                 if ($event->gambar && $event->gambar !== 'konser.jpg' && !filter_var($event->gambar, FILTER_VALIDATE_URL)) {

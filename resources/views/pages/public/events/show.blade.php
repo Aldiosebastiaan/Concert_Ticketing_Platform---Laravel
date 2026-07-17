@@ -95,8 +95,8 @@
         .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
         .badge-upcoming { background: rgba(0,113,227,0.08); color: #0055b3; }
         .badge-upcoming::before { background: #0071e3; }
-        .badge-ongoing { background: rgba(52,199,89,0.1); color: #1a7a3a; }
-        .badge-ongoing::before { background: #34c759; animation: pulse 1.5s infinite; }
+        .badge-on-going { background: rgba(52,199,89,0.1); color: #1a7a3a; }
+        .badge-on-going::before { background: #34c759; animation: pulse 1.5s infinite; }
         .badge-completed { background: rgba(0,0,0,0.05); color: var(--text-secondary); }
         .badge-completed::before { background: #86868b; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -158,7 +158,7 @@
                         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
                             <h2 class="detail-title" style="margin-bottom:0;">Informasi Event</h2>
                             @php $status = $event->status; @endphp
-                            <span class="badge badge-{{ strtolower($status) }}">{{ $status }}</span>
+                            <span class="badge badge-{{ str_replace(' ', '-', strtolower($status)) }}">{{ $status }}</span>
                         </div>
 
                         <div class="meta-row">
@@ -171,24 +171,7 @@
                         </div>
                         <div class="meta-row">
                             <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-                            <div>
-                                <div class="meta-label">Masa Penjualan</div>
-                                <div class="meta-value">
-                                    @if($event->tanggal_mulai_penjualan && $event->tanggal_selesai_penjualan)
-                                        {{ $event->tanggal_mulai_penjualan->format('d M, H:i') }} - {{ $event->tanggal_selesai_penjualan->format('d M, H:i') }}
-                                        @if($event->isDalamRentangPenjualan())
-                                            <span style="color:#34c759; font-size:12px; margin-left:4px;">(Sedang Dijual)</span>
-                                        @elseif($event->isSebelumPenjualan())
-                                            <span style="color:#0071e3; font-size:12px; margin-left:4px;">(Segera)</span>
-                                        @else
-                                            <span style="color:#86868b; font-size:12px; margin-left:4px;">(Selesai)</span>
-                                        @endif
-                                    @else
-                                        -
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
+
                         <div class="meta-row">
                             <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
                             <div><div class="meta-label">Kategori</div><div class="meta-value">{{ $event->kategori->nama ?? '-' }}</div></div>
@@ -227,7 +210,7 @@
                     @php $terjual = \App\Models\DetailOrder::where('tiket_id', $tiket->id)->sum('jumlah'); @endphp
                     <label class="ticket-option" style="cursor:pointer;">
                         <div style="display:flex; gap:12px; align-items:flex-start;">
-                            <input type="radio" name="tiket_id" value="{{ $tiket->id }}" style="margin-top:4px;" required {{ !$event->isDalamRentangPenjualan() || $tiket->stok <= 0 ? 'disabled' : '' }}>
+                            <input type="radio" name="tiket_id" value="{{ $tiket->id }}" style="margin-top:4px;" required {{ $tiket->stok <= 0 ? 'disabled' : '' }}>
                             <div>
                                 <div class="ticket-type">
                                     {{ $tiket->tipe === 'premium' ? '⭐ ' : '🎟 ' }}{{ ucfirst($tiket->tipe) }}
@@ -244,25 +227,13 @@
                     @endforelse
 
                     <div style="padding:16px;">
-                        @if(!$event->isDalamRentangPenjualan())
-                            <div style="text-align:center;font-size:14px;color:var(--text-tertiary);padding:8px 0; background:var(--bg); border-radius:10px;">
-                                @if($event->isSebelumPenjualan())
-                                    Penjualan belum dimulai
-                                @elseif($event->isSetelahPenjualan())
-                                    Penjualan telah ditutup
-                                @else
-                                    Tidak dalam masa penjualan
-                                @endif
-                            </div>
-                        @else
-                            <div style="margin-bottom:12px;">
-                                <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block;">Jumlah Tiket</label>
-                                <input type="number" name="jumlah" value="1" min="1" max="10" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px;">
-                            </div>
-                            <button type="submit" style="width:100%;padding:12px;background:#0071e3;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:inherit;" onmouseover="this.style.background='#0077ed'" onmouseout="this.style.background='#0071e3'">
-                                Beli Tiket
-                            </button>
-                        @endif
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block;">Jumlah Tiket</label>
+                            <input type="number" name="jumlah" value="1" min="1" max="10" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px;">
+                        </div>
+                        <button type="submit" style="width:100%;padding:12px;background:#0071e3;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:inherit;" onmouseover="this.style.background='#0077ed'" onmouseout="this.style.background='#0071e3'">
+                            Beli Tiket
+                        </button>
                     </div>
                 </form>
 

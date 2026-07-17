@@ -88,7 +88,6 @@
                     <th>Judul</th>
                     <th>Kategori</th>
                     <th>Tanggal</th>
-                    <th>Masa Penjualan</th>
                     <th>Lokasi</th>
                     <th>Status</th>
                     <th style="width:120px">Aksi</th>
@@ -105,9 +104,6 @@
                             if ($event->hasSales()) {
                                 $cannotDelete = true;
                                 $deleteReason = 'Event ini tidak dapat dihapus karena sudah memiliki penjualan tiket. Menghapus event ini akan menghilangkan rekam jejak transaksi penjualan yang sudah terjadi.';
-                            } elseif ($event->isDalamRentangPenjualan()) {
-                                $cannotDelete = true;
-                                $deleteReason = 'Event ini tidak dapat dihapus karena sedang dalam masa aktif penjualan tiket. Silakan ubah rentang masa penjualan terlebih dahulu jika ingin menghapusnya.';
                             }
                         }
                     @endphp
@@ -141,15 +137,6 @@
                         <div class="event-meta">{{ \Carbon\Carbon::parse($event->tanggal_waktu)->format('H:i') }} WIB</div>
                     </td>
 
-                    <td>
-                        @if($event->tanggal_mulai_penjualan && $event->tanggal_selesai_penjualan)
-                            <div style="font-size:12px;">{{ $event->tanggal_mulai_penjualan->format('d M, H:i') }}</div>
-                            <div style="font-size:12px; color:var(--text-secondary);">s/d {{ $event->tanggal_selesai_penjualan->format('d M, H:i') }}</div>
-                        @else
-                            -
-                        @endif
-                    </td>
-
                     {{-- Lokasi --}}
                     <td>
                         <span style="font-size:13px; max-width:160px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $event->lokasi->nama_lokasi ?? '-' }}</span>
@@ -158,7 +145,7 @@
                     {{-- Status --}}
                     <td>
                         @php $status = $event->status; @endphp
-                        <span class="badge badge-{{ strtolower($status) }}">{{ $status }}</span>
+                        <span class="badge badge-{{ str_replace(' ', '-', strtolower($status)) }}">{{ $status }}</span>
                         <div style="margin-top: 4px; font-size: 11px; text-transform: uppercase; color: var(--text-secondary);">
                             {{ $event->status_publikasi }}
                         </div>
