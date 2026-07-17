@@ -171,9 +171,6 @@
                         </div>
                         <div class="meta-row">
                             <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-
-                        <div class="meta-row">
-                            <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
                             <div><div class="meta-label">Kategori</div><div class="meta-value">{{ $event->kategori->nama ?? '-' }}</div></div>
                         </div>
                     </div>
@@ -206,11 +203,19 @@
                         <div class="ticket-widget-sub">{{ $event->tikets->count() }} tipe tiket tersedia</div>
                     </div>
 
+                    @php 
+                        $totalStokAll = 0; 
+                    @endphp
+
                     @forelse($event->tikets as $tiket)
-                    @php $terjual = \App\Models\DetailOrder::where('tiket_id', $tiket->id)->sum('jumlah'); @endphp
-                    <label class="ticket-option" style="cursor:pointer;">
+                    @php 
+                        $terjual = \App\Models\DetailOrder::where('tiket_id', $tiket->id)->sum('jumlah');
+                        $totalStokAll += $tiket->stok; 
+                    @endphp
+                    <label class="ticket-option" style="cursor:{{ $tiket->stok <= 0 || !$event->isLokasiAktif() ? 'not-allowed' : 'pointer' }}; opacity:{{ $tiket->stok <= 0 ? '0.5' : '1' }};">
                         <div style="display:flex; gap:12px; align-items:flex-start;">
-                            <input type="radio" name="tiket_id" value="{{ $tiket->id }}" style="margin-top:4px;" required {{ $tiket->stok <= 0 ? 'disabled' : '' }}>
+                            {{-- Disable radio button --}}
+                            <input type="radio" name="tiket_id" value="{{ $tiket->id }}" style="margin-top:4px;" required {{ $tiket->stok <= 0 || !$event->isLokasiAktif() ? 'disabled' : '' }}>
                             <div>
                                 <div class="ticket-type">
                                     {{ $tiket->tipe === 'premium' ? '⭐ ' : '🎟 ' }}{{ ucfirst($tiket->tipe) }}
@@ -229,11 +234,24 @@
                     <div style="padding:16px;">
                         <div style="margin-bottom:12px;">
                             <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block;">Jumlah Tiket</label>
-                            <input type="number" name="jumlah" value="1" min="1" max="10" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px;">
+                            {{-- Disable tiket --}}
+                            <input type="number" name="jumlah" value="1" min="1" max="10" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px;" {{ !$event->isLokasiAktif() || $totalStokAll <= 0 ? 'disabled' : '' }}>
                         </div>
-                        <button type="submit" style="width:100%;padding:12px;background:#0071e3;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:inherit;" onmouseover="this.style.background='#0077ed'" onmouseout="this.style.background='#0071e3'">
-                            Beli Tiket
-                        </button>
+                        
+                        {{-- Logika Lokasi Aktif / Nonaktif--}}
+                        @if(!$event->isLokasiAktif())
+                            <button type="button" disabled style="width:100%;padding:12px;background:#e1e3e4;color:#6e6e73;border:1px solid var(--border);border-radius:10px;font-size:15px;font-weight:600;cursor:not-allowed;font-family:inherit;">
+                                Lokasi Tidak Tersedia
+                            </button>
+                        @elseif($totalStokAll <= 0 && $event->tikets->count() > 0)
+                            <button type="button" disabled style="width:100%;padding:12px;background:#ff3b30;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:not-allowed;opacity:0.8;font-family:inherit;">
+                                Sold Out
+                            </button>
+                        @else
+                            <button type="submit" style="width:100%;padding:12px;background:#0071e3;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:inherit;" onmouseover="this.style.background='#0077ed'" onmouseout="this.style.background='#0071e3'">
+                                Beli Tiket
+                            </button>
+                        @endif
                     </div>
                 </form>
 
