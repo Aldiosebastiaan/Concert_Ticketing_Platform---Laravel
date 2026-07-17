@@ -101,12 +101,14 @@
                     @php
                         $cannotDelete = false;
                         $deleteReason = '';
-                        if ($event->hasSales()) {
-                            $cannotDelete = true;
-                            $deleteReason = 'Event ini tidak dapat dihapus karena sudah memiliki penjualan tiket. Menghapus event ini akan menghilangkan rekam jejak transaksi penjualan yang sudah terjadi.';
-                        } elseif ($event->isDalamRentangPenjualan()) {
-                            $cannotDelete = true;
-                            $deleteReason = 'Event ini tidak dapat dihapus karena sedang dalam masa aktif penjualan tiket. Silakan ubah rentang masa penjualan terlebih dahulu jika ingin menghapusnya.';
+                        if ($event->status !== 'Completed') {
+                            if ($event->hasSales()) {
+                                $cannotDelete = true;
+                                $deleteReason = 'Event ini tidak dapat dihapus karena sudah memiliki penjualan tiket. Menghapus event ini akan menghilangkan rekam jejak transaksi penjualan yang sudah terjadi.';
+                            } elseif ($event->isDalamRentangPenjualan()) {
+                                $cannotDelete = true;
+                                $deleteReason = 'Event ini tidak dapat dihapus karena sedang dalam masa aktif penjualan tiket. Silakan ubah rentang masa penjualan terlebih dahulu jika ingin menghapusnya.';
+                            }
                         }
                     @endphp
                     <td>
@@ -205,11 +207,23 @@
     </div>
 
     {{-- Pagination --}}
-    @if($events->hasPages())
-    <div class="pagination-wrapper">
-        {{ $events->appends(request()->except('page'))->links() }}
+    <div class="pagination-wrapper" style="display: flex; align-items: center; gap: 16px;">
+        @if($events->hasPages())
+            {{ $events->appends(request()->except('page'))->links('vendor.pagination.admin') }}
+        @endif
+        
+        <select class="filter-input" style="padding: 4px 28px 4px 12px; font-size: 13px; height: 32px;" onchange="window.location.href=this.value">
+            @foreach([10, 25, 50, 100] as $limit)
+                <option value="{{ request()->fullUrlWithQuery(['limit' => $limit, 'page' => 1]) }}" {{ request('limit', 10) == $limit ? 'selected' : '' }}>
+                    {{ $limit }}
+                </option>
+            @endforeach
+        </select>
+
+        <span style="font-size: 14px; color: var(--text-secondary);">
+            Showing {{ $events->firstItem() ?? 0 }} to {{ $events->lastItem() ?? 0 }} of {{ $events->total() }} entries
+        </span>
     </div>
-    @endif
 </div>
 </form>
 

@@ -65,8 +65,9 @@ class EventController extends Controller
         $sort = $request->get('sort', 'asc');
         $query->orderBy('tanggal_waktu', $sort);
 
-        // 5. Paginate dengan 10 items per page
-        $events = $query->paginate(10);
+        // 5. Paginate dengan limit items per page
+        $limit = $request->get('limit', 10);
+        $events = $query->paginate($limit);
         $kategoris = Kategori::all();
 
         return view('pages.admin.events.index', compact('events', 'kategoris'));
@@ -254,13 +255,15 @@ class EventController extends Controller
 
     public function destroy(Event $event)
     {
-        // 1. Cek apakah event memiliki penjualan
-        if ($event->isDalamRentangPenjualan()) {
-            return back()->with('error', 'Event tidak dapat dihapus karena sedang dalam masa penjualan tiket.');
-        }
+        // 1. Cek apakah event memiliki penjualan, kecuali jika event sudah 'Completed'
+        if ($event->status !== 'Completed') {
+            if ($event->isDalamRentangPenjualan()) {
+                return back()->with('error', 'Event tidak dapat dihapus karena sedang dalam masa penjualan tiket.');
+            }
 
-        if ($event->hasSales()) {
-            return back()->with('error', 'Event tidak dapat dihapus karena sudah memiliki penjualan tiket.');
+            if ($event->hasSales()) {
+                return back()->with('error', 'Event tidak dapat dihapus karena sudah memiliki penjualan tiket.');
+            }
         }
 
         // 3. Jika tidak: Hapus image dari storage (jika bukan default)
@@ -308,7 +311,7 @@ class EventController extends Controller
         $skipped = 0;
 
         foreach ($events as $event) {
-            if ($event->hasSales() || $event->isDalamRentangPenjualan()) {
+            if ($event->status !== 'Completed' && ($event->hasSales() || $event->isDalamRentangPenjualan())) {
                 $skipped++;
             } else {
                 if ($event->gambar && $event->gambar !== 'konser.jpg' && !filter_var($event->gambar, FILTER_VALIDATE_URL)) {
@@ -320,7 +323,7 @@ class EventController extends Controller
         }
 
         if ($skipped > 0) {
-            return back()->with('warning', "$deleted event berhasil dihapus. $skipped event dilewati karena sudah memiliki penjualan tiket.");
+            return back()->with('warning', "$deleted event berhasil dihapus. $skipped event dilewati karena sudah memiliki penjualan tiket dan belum selesai (Completed).");
         }
 
         return back()->with('success', "$deleted event berhasil dihapus.");
