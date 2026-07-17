@@ -113,19 +113,7 @@
                 @error('tanggal_waktu') <span class="form-error">{{ $message }}</span> @enderror
             </div>
 
-            {{-- Rentang Penjualan --}}
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Mulai Penjualan <span class="req">*</span></label>
-                    <input type="datetime-local" name="tanggal_mulai_penjualan" class="form-control {{ $errors->has('tanggal_mulai_penjualan') ? 'border-danger' : '' }}" value="{{ old('tanggal_mulai_penjualan', $event->tanggal_mulai_penjualan ? \Carbon\Carbon::parse($event->tanggal_mulai_penjualan)->format('Y-m-d\TH:i') : '') }}" required>
-                    @error('tanggal_mulai_penjualan') <span class="form-error">{{ $message }}</span> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Selesai Penjualan <span class="req">*</span></label>
-                    <input type="datetime-local" name="tanggal_selesai_penjualan" class="form-control {{ $errors->has('tanggal_selesai_penjualan') ? 'border-danger' : '' }}" value="{{ old('tanggal_selesai_penjualan', $event->tanggal_selesai_penjualan ? \Carbon\Carbon::parse($event->tanggal_selesai_penjualan)->format('Y-m-d\TH:i') : '') }}" required>
-                    @error('tanggal_selesai_penjualan') <span class="form-error">{{ $message }}</span> @enderror
-                </div>
-            </div>
+
 
             {{-- Status Publikasi --}}
             <div class="form-group">

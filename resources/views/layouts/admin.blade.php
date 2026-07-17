@@ -303,8 +303,8 @@
         .badge-upcoming { background: rgba(0,113,227,0.08); color: #0055b3; }
         .badge-upcoming::before { background: var(--accent); }
 
-        .badge-ongoing { background: rgba(52,199,89,0.1); color: #1a7a3a; }
-        .badge-ongoing::before { background: var(--success); animation: pulse 1.5s infinite; }
+        .badge-on-going { background: rgba(52,199,89,0.1); color: #1a7a3a; }
+        .badge-on-going::before { background: var(--success); animation: pulse 1.5s infinite; }
 
         .badge-completed { background: rgba(0,0,0,0.05); color: var(--text-secondary); }
         .badge-completed::before { background: var(--text-tertiary); }

@@ -29,8 +29,6 @@ class EventFormRequest extends FormRequest
             'lokasi_id' => 'required|exists:lokasis,id',
             'kategori_id' => 'required|exists:kategoris,id',
             'tanggal_waktu' => 'required|date|after:now',
-            'tanggal_mulai_penjualan' => 'required|date',
-            'tanggal_selesai_penjualan' => 'required|date|after:tanggal_mulai_penjualan',
             'gambar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             
             'tikets' => 'required|array|min:1',
@@ -65,13 +63,6 @@ class EventFormRequest extends FormRequest
             'tanggal_waktu.required' => 'Tanggal dan waktu event wajib diisi.',
             'tanggal_waktu.date' => 'Format tanggal dan waktu tidak valid.',
             'tanggal_waktu.after' => 'Tanggal dan waktu event harus setelah waktu saat ini.',
-            
-            'tanggal_mulai_penjualan.required' => 'Tanggal mulai penjualan wajib diisi.',
-            'tanggal_mulai_penjualan.date' => 'Format tanggal mulai penjualan tidak valid.',
-            
-            'tanggal_selesai_penjualan.required' => 'Tanggal selesai penjualan wajib diisi.',
-            'tanggal_selesai_penjualan.date' => 'Format tanggal selesai penjualan tidak valid.',
-            'tanggal_selesai_penjualan.after' => 'Tanggal selesai penjualan harus setelah tanggal mulai penjualan.',
             
             'gambar.image' => 'File harus berupa gambar.',
             'gambar.mimes' => 'Format gambar harus berupa jpg, jpeg, atau png.',
