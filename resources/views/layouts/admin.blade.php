@@ -487,6 +487,10 @@
                 <svg fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                 Manajemen Event
             </a>
+            <a href="{{ route('admin.lokasi.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.lokasi*') ? 'active' : '' }}">
+                <svg fill="none" viewBox="0 0 24 24"><path d="M12 21s-8-4.5-8-11.8A8 8 0 0112 1.2a8 8 0 018 8c0 7.3-8 11.8-8 11.8z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="9.2" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
+                Manajemen Lokasi
+            </a>
         </div>
 
         <div class="sidebar-user">

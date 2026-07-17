@@ -26,7 +26,7 @@ class EventFormRequest extends FormRequest
         return [
             'judul' => 'required|string|max:255',
             'deskripsi' => 'required|string',
-            'lokasi' => 'required|string|max:255',
+            'lokasi_id' => 'required|exists:lokasis,id',
             'kategori_id' => 'required|exists:kategoris,id',
             'tanggal_waktu' => 'required|date|after:now',
             'tanggal_mulai_penjualan' => 'required|date',
@@ -56,9 +56,8 @@ class EventFormRequest extends FormRequest
             'deskripsi.required' => 'Deskripsi event wajib diisi.',
             'deskripsi.string' => 'Deskripsi event harus berupa teks.',
             
-            'lokasi.required' => 'Lokasi event wajib diisi.',
-            'lokasi.string' => 'Lokasi event harus berupa teks.',
-            'lokasi.max' => 'Lokasi event maksimal 255 karakter.',
+            'lokasi_id.required' => 'Lokasi event wajib dipilih.',
+            'lokasi_id.exists' => 'Lokasi yang dipilih tidak valid.',
             
             'kategori_id.required' => 'Kategori wajib dipilih.',
             'kategori_id.exists' => 'Kategori tidak valid.',

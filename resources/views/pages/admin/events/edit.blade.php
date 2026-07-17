@@ -89,8 +89,15 @@
             {{-- Lokasi --}}
             <div class="form-group">
                 <label class="form-label">Lokasi <span class="req">*</span></label>
-                <input type="text" name="lokasi" class="form-control {{ $errors->has('lokasi') ? 'border-danger' : '' }}" value="{{ old('lokasi', $event->lokasi) }}" required>
-                @error('lokasi') <span class="form-error">{{ $message }}</span> @enderror
+                <select name="lokasi_id" class="form-control {{ $errors->has('lokasi_id') ? 'border-danger' : '' }}" required>
+                    <option value="" disabled {{ old('lokasi_id', $event->lokasi_id) ? '' : 'selected' }}>Pilih lokasi...</option>
+                    @foreach($lokasis as $lokasi)
+                        <option value="{{ $lokasi->id }}" {{ old('lokasi_id', $event->lokasi_id) == $lokasi->id ? 'selected' : '' }}>
+                            {{ $lokasi->nama_lokasi }} {{ $lokasi->aktif == 'N' ? '(Non-Aktif)' : '' }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('lokasi_id') <span class="form-error">{{ $message }}</span> @enderror
             </div>
 
             {{-- Tanggal & Waktu --}}

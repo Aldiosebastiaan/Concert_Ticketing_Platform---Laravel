@@ -13,9 +13,9 @@ class Event extends Model
     protected $fillable = [
         'user_id',
         'kategori_id',
+        'lokasi_id',
         'judul',
         'deskripsi',
-        'lokasi',
         'gambar',
         'tanggal_waktu',
         'status',
@@ -46,6 +46,11 @@ class Event extends Model
     public function kategori()
     {
         return $this->belongsTo(Kategori::class);
+    }
+
+    public function lokasi()
+    {
+        return $this->belongsTo(Lokasi::class);
     }
 
     public function user()

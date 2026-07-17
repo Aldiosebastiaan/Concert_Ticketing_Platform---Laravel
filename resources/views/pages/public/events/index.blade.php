@@ -289,7 +289,7 @@
                     </div>
                     <div class="flex items-center gap-2 text-on-surface-variant">
                         <span class="material-symbols-outlined" style="font-size:16px;">location_on</span>
-                        <span class="text-body-sm font-body-sm line-clamp-1">{{ $event->lokasi }}</span>
+                        <span class="text-body-sm font-body-sm line-clamp-1">{{ $event->lokasi->nama_lokasi ?? '-' }}</span>
                     </div>
                 </div>
 

@@ -143,7 +143,7 @@
                 {{ $event->kategori->nama ?? 'Konser' }}
             </div>
             <h1 class="hero-title">{{ $event->judul }}</h1>
-            <p class="hero-sub">{{ $event->lokasi }}</p>
+            <p class="hero-sub">{{ $event->lokasi->nama_lokasi ?? '-' }}</p>
         </div>
     </div>
 
@@ -167,7 +167,7 @@
                         </div>
                         <div class="meta-row">
                             <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/></svg></div>
-                            <div><div class="meta-label">Lokasi</div><div class="meta-value">{{ $event->lokasi }}</div></div>
+                            <div><div class="meta-label">Lokasi</div><div class="meta-value">{{ $event->lokasi->nama_lokasi ?? '-' }}</div></div>
                         </div>
                         <div class="meta-row">
                             <div class="meta-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>

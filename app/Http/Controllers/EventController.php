@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\EventFormRequest;
 use App\Models\Event;
 use App\Models\Kategori;
+use App\Models\Lokasi;
 use App\Models\Tiket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -20,13 +21,15 @@ class EventController extends Controller
      */
     public function publicIndex(Request $request)
     {
-        $query = Event::with(['kategori', 'tikets'])->where('status_publikasi', 'published');
+        $query = Event::with(['kategori', 'lokasi', 'tikets'])->where('status_publikasi', 'published');
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('judul', 'like', "%{$search}%")
-                  ->orWhere('lokasi', 'like', "%{$search}%");
+                  ->orWhereHas('lokasi', function ($q2) use ($search) {
+                      $q2->where('nama_lokasi', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -44,8 +47,8 @@ class EventController extends Controller
 
     public function index(Request $request)
     {
-        // 1. Load events dengan relationships: kategori dan tikets
-        $query = Event::with(['kategori', 'tikets']);
+        // 1. Load events dengan relationships: kategori, lokasi dan tikets
+        $query = Event::with(['kategori', 'lokasi', 'tikets']);
 
         // 2. Filter by kategori_id jika parameter ada
         if ($request->has('kategori_id') && $request->kategori_id != '') {
@@ -57,7 +60,9 @@ class EventController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('judul', 'like', "%{$search}%")
-                  ->orWhere('lokasi', 'like', "%{$search}%");
+                  ->orWhereHas('lokasi', function($q2) use ($search) {
+                      $q2->where('nama_lokasi', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -76,7 +81,8 @@ class EventController extends Controller
     public function create()
     {
         $kategoris = Kategori::all();
-        return view('pages.admin.events.create', compact('kategoris'));
+        $lokasis = Lokasi::where('aktif', 'Y')->orderBy('nama_lokasi', 'asc')->get();
+        return view('pages.admin.events.create', compact('kategoris', 'lokasis'));
     }
 
     // 1. Validasi input menggunakan EventFormRequest
@@ -106,7 +112,7 @@ class EventController extends Controller
                 'kategori_id' => $request->kategori_id,
                 'judul' => $request->judul,
                 'deskripsi' => $request->deskripsi,
-                'lokasi' => $request->lokasi,
+                'lokasi_id' => $request->lokasi_id,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
                 'tanggal_mulai_penjualan' => $request->tanggal_mulai_penjualan,
@@ -143,13 +149,16 @@ class EventController extends Controller
     public function edit(Event $event)
     {
         // Load event dan kategoris, Load tikets dari event
-        $event->load(['kategori', 'tikets']);
+        $event->load(['kategori', 'lokasi', 'tikets']);
         $kategoris = Kategori::all();
+        // Ambil semua lokasi yg aktif, tapi kalau lokasi yg tersimpan di event ini kebetulan sedang non-aktif,
+        // kita perlu includekan juga supaya ga error/hilang dari select dropdown.
+        $lokasis = Lokasi::where('aktif', 'Y')->orWhere('id', $event->lokasi_id)->orderBy('nama_lokasi', 'asc')->get();
         
         // Cek $event->hasSales() dan pass ke view
         $hasSales = $event->hasSales();
         
-        return view('pages.admin.events.edit', compact('event', 'kategoris', 'hasSales'));
+        return view('pages.admin.events.edit', compact('event', 'kategoris', 'lokasis', 'hasSales'));
     }
 
 
@@ -197,7 +206,7 @@ class EventController extends Controller
                 'kategori_id' => $request->kategori_id,
                 'judul' => $request->judul,
                 'deskripsi' => $request->deskripsi,
-                'lokasi' => $request->lokasi,
+                'lokasi_id' => $request->lokasi_id,
                 'gambar' => $gambarPath,
                 'tanggal_waktu' => $request->tanggal_waktu,
                 'tanggal_mulai_penjualan' => $request->tanggal_mulai_penjualan,
@@ -281,7 +290,7 @@ class EventController extends Controller
     public function show(Event $event)
     {
         // Detail event dengan relationships
-        $event->load(['kategori', 'tikets', 'user']);
+        $event->load(['kategori', 'lokasi', 'tikets', 'user']);
 
         // Related events (kategori sama, tanggal > now, max 4 events)
         $relatedEvents = Event::where('kategori_id', $event->kategori_id)

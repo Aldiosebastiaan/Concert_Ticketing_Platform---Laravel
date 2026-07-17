@@ -23,3 +23,14 @@ Route::prefix('admin')->name('admin.events.')->group(function () {
     Route::put('/events/{event}', [EventController::class, 'update'])->name('update');
     Route::delete('/events/{event}', [EventController::class, 'destroy'])->name('destroy');
 });
+
+// Admin lokasi routes
+Route::prefix('admin')->name('admin.lokasi.')->group(function () {
+    Route::post('/lokasi/bulk-delete', [\App\Http\Controllers\LokasiController::class, 'bulkDelete'])->name('bulkDelete');
+    Route::get('/lokasi', [\App\Http\Controllers\LokasiController::class, 'index'])->name('index');
+    Route::get('/lokasi/create', [\App\Http\Controllers\LokasiController::class, 'create'])->name('create');
+    Route::post('/lokasi', [\App\Http\Controllers\LokasiController::class, 'store'])->name('store');
+    Route::get('/lokasi/{lokasi}/edit', [\App\Http\Controllers\LokasiController::class, 'edit'])->name('edit');
+    Route::put('/lokasi/{lokasi}', [\App\Http\Controllers\LokasiController::class, 'update'])->name('update');
+    Route::delete('/lokasi/{lokasi}', [\App\Http\Controllers\LokasiController::class, 'destroy'])->name('destroy');
+});
