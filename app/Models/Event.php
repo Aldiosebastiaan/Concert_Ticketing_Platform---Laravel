@@ -101,18 +101,20 @@ class Event extends Model
     {
         $url = $this->gambar;
 
-        // Jika URL absolut (http/https) — Unsplash, external, dll
         if ($url && (str_starts_with($url, 'http://') || str_starts_with($url, 'https://'))) {
             return $url;
         }
 
-        // Jika path file lokal di storage
         if ($url && $url !== 'konser.jpg') {
             return Storage::url($url);
         }
 
-        // Fallback default
         return asset('images/konser.jpg');
+    }
+
+    public function isLokasiAktif()
+    {
+        return $this->lokasi ? $this->lokasi->aktif === 'Y' : true;
     }
 
 }

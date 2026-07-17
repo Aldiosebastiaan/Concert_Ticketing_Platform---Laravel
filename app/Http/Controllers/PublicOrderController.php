@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Event;
@@ -13,6 +12,12 @@ class PublicOrderController extends Controller
 {
     public function store(Request $request, Event $event)
     {
+        // 1. Pengecekan Lokasi Aktif
+        if (!$event->isLokasiAktif()) {
+            return back()->with('error', 'Mohon maaf, tiket tidak dapat dibeli karena lokasi penyelenggaraan sedang tidak aktif.');
+        }
+
+        // 2. Perbaikan Syntax Validasi
         $request->validate([
             'tiket_id' => 'required|exists:tikets,id',
             'jumlah' => 'required|integer|min:1'
@@ -30,19 +35,19 @@ class PublicOrderController extends Controller
                 // Kurangi stok
                 $tiket->stok -= $jumlah;
                 $tiket->save();
-
+                
                 $subtotal = $tiket->harga * $jumlah;
-
-                // Buat Order (Hardcode user_id = 1 untuk simulasi)
+                
+                // Buat Order
                 Order::unguard();
                 $order = Order::create([
-                    'user_id' => 1,
+                    'user_id' => 1, // Pastikan ini diubah menggunakan auth()->id() ke depannya
                     'event_id' => $event->id,
                     'order_date' => now(),
                     'total_harga' => $subtotal,
                 ]);
                 Order::reguard();
-
+                
                 // Buat Detail Order
                 DetailOrder::create([
                     'order_id' => $order->id,
